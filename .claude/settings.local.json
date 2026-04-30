@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Bash(npx --version)",
+      "Bash(npx -y @upstash/context7-mcp --help)",
+      "Bash(npx -y firecrawl-mcp --help)",
+      "WebFetch(domain:ai.codefather.cn)",
+      "WebSearch",
+      "WebFetch(domain:microsoft.github.io)",
+      "Bash(uv --version)",
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:sbert.net)",
+      "WebFetch(domain:blog.premai.io)",
+      "WebFetch(domain:www.firecrawl.dev)",
+      "WebFetch(domain:langcopilot.com)",
+      "WebFetch(domain:www.ibm.com)",
+      "WebFetch(domain:graphrag.com)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:nexla.com)",
+      "WebFetch(domain:ragflow.io)",
+      "WebFetch(domain:aishwaryasrinivasan.substack.com)",
+      "Bash(.venv\\\\Scripts\\\\alembic upgrade *)"
+    ]
+  }
+}
