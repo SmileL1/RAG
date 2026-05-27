@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import select
 
-from app.api import admin, auth, chat, documents, knowledge_base
+from app.api import admin, auth, chat, documents, knowledge_base, settings_api
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.exceptions import AppException
@@ -116,3 +116,4 @@ app.include_router(admin.router)
 app.include_router(knowledge_base.router)
 app.include_router(documents.router)
 app.include_router(chat.router)
+app.include_router(settings_api.router)

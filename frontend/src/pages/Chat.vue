@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch, computed } from 'vue'
 import { useKnowledgeStore } from '@/stores/knowledge'
 import { useChatStore } from '@/stores/chat'
 import { streamChat, chatApi } from '@/api/chat'
@@ -22,7 +22,7 @@ onMounted(async () => {
 })
 
 async function loadConversations() {
-  conversations.value = await chatApi.conversations()
+  conversations.value = await chatApi.conversations(kbStore.currentId ?? undefined)
 }
 
 async function selectConv(conv: Conversation) {
@@ -114,6 +114,15 @@ function scrollBottom() {
     }
   })
 }
+
+// 切换知识库时重新加载该 KB 的会话列表，并清空当前对话
+watch(
+  () => kbStore.currentId,
+  async () => {
+    chatStore.reset()
+    await loadConversations()
+  },
+)
 
 watch(
   () => chatStore.messages.length,

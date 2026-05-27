@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+# 切换为清华 apt 镜像，同时替换主库和安全库两个域名
+RUN sed -i \
+    -e 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' \
+    -e 's|security.debian.org|mirrors.tuna.tsinghua.edu.cn|g' \
+    /etc/apt/sources.list.d/debian.sources
+
+# 系统依赖：asyncpg 需要 libpq-dev，FlagEmbedding 需要 gcc/g++
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ git curl \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir --upgrade pip
+
+# 优先安装 CPU-only PyTorch，避免 FlagEmbedding 拉取带 CUDA 的大包（~4GB → ~700MB）
+RUN pip install --no-cache-dir \
+    torch --index-url https://download.pytorch.org/whl/cpu
+
+# 先只复制 pyproject.toml，利用 Docker 层缓存：
+# 只要依赖没变，后续 COPY 源码不会重装包
+COPY pyproject.toml README.md ./
+RUN mkdir -p app && touch app/__init__.py
+RUN pip install --no-cache-dir -e .
+
+# 复制源码（此层频繁变动，排在最后）
+COPY . .
+
+# 确保上传目录存在
+RUN mkdir -p uploads
+
+EXPOSE 8000
+
+# 启动前自动执行数据库迁移，再启动 uvicorn
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]

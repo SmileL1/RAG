@@ -18,6 +18,7 @@ const kb = computed(() => kbStore.list.find((k) => k.id === kbId.value))
 const docs = ref<Document[]>([])
 const loading = ref(false)
 const deletingId = ref<number | null>(null)
+const retryingId = ref<number | null>(null)
 
 // ── 预览 ────────────────────────────────────────────────
 const previewDoc = ref<Document | null>(null)
@@ -105,6 +106,20 @@ async function load() {
   }
 }
 
+async function retryDoc(doc: Document) {
+  retryingId.value = doc.id
+  try {
+    const updated = await docApi.retry(doc.id)
+    const idx = docs.value.findIndex((d) => d.id === doc.id)
+    if (idx !== -1) docs.value[idx] = updated
+    message.success('已重新触发解析')
+  } catch (e: unknown) {
+    message.error((e as Error).message)
+  } finally {
+    retryingId.value = null
+  }
+}
+
 async function removeDoc(doc: Document) {
   if (!confirm(`确定删除文档「${doc.filename}」？此操作不可恢复，相关向量也将删除。`)) return
   deletingId.value = doc.id
@@ -186,6 +201,15 @@ onMounted(load)
                 @click="openPreview(doc)"
               >
                 <Icon icon="ph:eye-duotone" />
+              </button>
+              <button
+                v-if="doc.status === 'failed' || doc.status === 'pending'"
+                class="action-btn retry"
+                :disabled="retryingId === doc.id"
+                title="重新解析"
+                @click="retryDoc(doc)"
+              >
+                <Icon icon="ph:arrow-clockwise-bold" />
               </button>
               <button
                 class="action-btn danger"
@@ -407,6 +431,7 @@ onMounted(load)
 }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .action-btn:hover { background: rgba(37, 99, 235, 0.08); color: #2563EB; }
+.action-btn.retry:hover { background: rgba(251, 191, 36, 0.12); color: #d97706; }
 .action-btn.danger:hover { background: rgba(239, 68, 68, 0.08); color: #dc2626; }
 
 /* ===== 预览模态框 ===== */

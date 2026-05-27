@@ -131,8 +131,14 @@ async def stream_chat(payload: ChatRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/conversations", response_model=list[ConversationOut])
-async def list_conversations(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Conversation).order_by(Conversation.id.desc()))
+async def list_conversations(
+    kb_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Conversation).order_by(Conversation.id.desc())
+    if kb_id is not None:
+        stmt = stmt.where(Conversation.kb_id == kb_id)
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 

@@ -73,8 +73,10 @@ function parseSseFrame(frame: string): ChatStreamEvent | null {
 /* ===== 普通 REST ===== */
 
 export const chatApi = {
-  conversations: () =>
-    http.get<Conversation[]>('/chat/conversations').then((r) => r.data),
+  conversations: (kbId?: number) =>
+    http
+      .get<Conversation[]>('/chat/conversations', { params: kbId ? { kb_id: kbId } : {} })
+      .then((r) => r.data),
   messages: (convId: number) =>
     http.get<Message[]>(`/chat/conversations/${convId}/messages`).then((r) => r.data),
   removeConversation: (id: number) =>

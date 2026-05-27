@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useMessage } from 'naive-ui'
@@ -23,6 +23,21 @@ onMounted(async () => {
   try {
     kb.value = await kbApi.get(kbId)
     existingDocs.value = await docApi.list(kbId)
+
+    // 页面刷新后恢复仍在处理中的文档到 rows，避免无法看到实时进度
+    const inProgress = existingDocs.value.filter(
+      (d) => d.status === 'pending' || d.status === 'processing',
+    )
+    if (inProgress.length > 0) {
+      rows.value = inProgress.map((doc) => ({
+        key: `recover-${doc.id}`,
+        filename: doc.filename,
+        size: doc.file_size,
+        uploadPct: 100,
+        doc,
+      }))
+      polling.start()
+    }
   } catch (e) {
     message.error('加载知识库信息失败：' + (e as Error).message)
     router.push('/knowledge')
@@ -88,8 +103,7 @@ const hasPending = computed(() =>
   rows.value.some((r) => r.doc && (r.doc.status === 'pending' || r.doc.status === 'processing')),
 )
 
-// 一旦有上传完成的 doc，启动轮询
-import { watch } from 'vue'
+// 新文档上传完成后，若有 pending/processing 则启动轮询
 watch(
   () => rows.value.map((r) => r.doc?.id).join(','),
   () => {

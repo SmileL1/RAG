@@ -26,6 +26,11 @@ class UserOut(BaseModel):
 
 # ===== 管理员用户管理 =====
 
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=6, description="新密码至少 6 位")
+
+
 class CreateUserRequest(BaseModel):
     username: str = Field(..., min_length=2, max_length=64)
     password: str | None = Field(None, description="留空则自动生成")

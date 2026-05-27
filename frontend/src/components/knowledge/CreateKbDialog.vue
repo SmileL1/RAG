@@ -58,7 +58,7 @@ async function submit() {
       <NFormItem label="名称" required>
         <NInput
           v-model:value="name"
-          placeholder="例如：员工手册 / 法律法规 / 论文笔记"
+          placeholder="给知识库起个名字，例如：员工手册、产品文档、法律法规"
           maxlength="64"
           show-count
           autofocus
@@ -68,7 +68,7 @@ async function submit() {
       <NFormItem label="描述">
         <NInput
           v-model:value="description"
-          placeholder="简单描述用途（可选）"
+          placeholder="描述这个知识库的用途，方便以后识别（可不填）"
           type="textarea"
           :rows="3"
           maxlength="200"

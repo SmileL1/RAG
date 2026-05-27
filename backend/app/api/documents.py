@@ -120,6 +120,48 @@ async def get_document_raw(doc_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 
+@router.post("/documents/{doc_id}/retry", response_model=DocumentOut)
+async def retry_document(
+    doc_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """重新触发失败文档的解析入库。清除旧 chunks 和向量后重新排队。"""
+    doc = await db.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+    if doc.status not in ("failed", "pending"):
+        raise HTTPException(400, f"只有 failed/pending 状态可重试，当前状态: {doc.status}")
+    if not Path(doc.file_path).exists():
+        raise HTTPException(404, "原始文件已从磁盘删除，无法重试")
+
+    # 清除旧 chunks 和向量
+    old_chunks = await db.execute(
+        select(Chunk).where(Chunk.document_id == doc_id)
+    )
+    for chunk in old_chunks.scalars().all():
+        await db.delete(chunk)
+    store = get_vector_store()
+    await store.delete_by_doc_id(VectorStore.collection_name(doc.kb_id), doc_id=doc_id)
+
+    # 重置状态
+    doc.status = "pending"
+    doc.error_message = None
+    doc.chunk_count = 0
+    doc.processed_at = None
+    await db.commit()
+    await db.refresh(doc)
+
+    if settings.INGEST_MODE == "celery":
+        from app.tasks.document_tasks import process_document
+        process_document.delay(doc.id)
+    else:
+        background_tasks.add_task(_ingest_in_background, doc.id)
+
+    logger.info("文档重试已触发 doc_id={}", doc_id)
+    return doc
+
+
 @router.delete("/documents/{doc_id}", response_model=MessageResponse)
 async def delete_document(doc_id: int, db: AsyncSession = Depends(get_db)):
     doc = await db.get(Document, doc_id)

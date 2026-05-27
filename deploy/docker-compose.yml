@@ -1,7 +1,9 @@
-# 内网服务器部署模板（当前阶段暂不启用，本地开发用原生安装）
 # 使用方式：
-#   1. 复制 .env.production.example → .env.production，填写生产配置
+#   1. cp .env.production.example .env.production  并填写所有必填项
 #   2. docker compose --env-file .env.production up -d
+#
+# 如需 Celery worker（INGEST_MODE=celery）：
+#   docker compose --env-file .env.production --profile celery up -d
 
 services:
   postgres:
@@ -40,13 +42,12 @@ services:
     image: qdrant/qdrant:latest
     container_name: rag-qdrant
     restart: unless-stopped
-    ports:
-      - "${QDRANT_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    # 不对外暴露端口，只允许容器内网访问（backend 通过服务名 qdrant:6333 连接）
     volumes:
       - qdrant_data:/qdrant/storage
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    # 如需启用 API Key 认证，取消注释并在 .env.production 填写 QDRANT_API_KEY
+    # environment:
+    #   QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
 
   backend:
     build:
@@ -55,19 +56,31 @@ services:
     container_name: rag-backend
     restart: unless-stopped
     env_file: .env.production
+    environment:
+      # HuggingFace 镜像（国内服务器）
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       qdrant:
         condition: service_started
     volumes:
-      - ../backend/uploads:/app/uploads
+      - uploads:/app/uploads
+      # 模型缓存：避免每次重启都重新下载 bge-m3（~2GB）
+      - hf_cache:/root/.cache/huggingface
     ports:
       - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
+  # Celery Worker（仅在 INGEST_MODE=celery 时需要）
+  # 启动方式：docker compose --profile celery up -d
   worker:
+    profiles: ["celery"]
     build:
       context: ../backend
       dockerfile: ../deploy/Dockerfile.backend
@@ -75,11 +88,16 @@ services:
     restart: unless-stopped
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
     env_file: .env.production
+    environment:
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     volumes:
-      - ../backend/uploads:/app/uploads
+      - uploads:/app/uploads
+      - hf_cache:/root/.cache/huggingface
 
   frontend:
     build:
@@ -88,15 +106,15 @@ services:
     container_name: rag-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   nginx:
     image: nginx:alpine
     container_name: rag-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -107,3 +125,5 @@ volumes:
   pg_data:
   redis_data:
   qdrant_data:
+  uploads:
+  hf_cache:

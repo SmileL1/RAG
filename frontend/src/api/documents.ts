@@ -39,6 +39,9 @@ export const docApi = {
     return resp.data
   },
 
+  retry: (id: number) =>
+    http.post<Document>(`/documents/${id}/retry`).then((r) => r.data),
+
   remove: (id: number) =>
     http.delete<{ message: string }>(`/documents/${id}`).then((r) => r.data),
 }

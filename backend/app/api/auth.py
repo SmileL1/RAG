@@ -6,9 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, UserOut
+from app.schemas.auth import ChangePasswordRequest, LoginRequest, TokenResponse, UserOut
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -27,3 +27,15 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(payload.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="原密码错误")
+    current_user.hashed_password = hash_password(payload.new_password)
+    await db.commit()
