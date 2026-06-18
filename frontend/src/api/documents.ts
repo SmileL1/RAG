@@ -1,6 +1,28 @@
 import { http } from './client'
 import type { Document } from './types'
 
+export interface ChunkContextItem {
+  chunk_idx: number
+  content: string
+  is_hit: boolean
+}
+export interface ChunkContext {
+  filename: string
+  doc_id: number
+  target_idx: number
+  chunks: ChunkContextItem[]
+}
+
+export interface DocChunk {
+  chunk_idx: number
+  content: string
+}
+export interface DocChunks {
+  filename: string
+  doc_id: number
+  chunks: DocChunk[]
+}
+
 export const docApi = {
   list: (kbId: number) =>
     http.get<Document[]>(`/kb/${kbId}/documents`).then((r) => r.data),
@@ -15,6 +37,14 @@ export const docApi = {
     http
       .get<{ filename: string; content: string; chunk_count: number }>(`/documents/${id}/text`)
       .then((r) => r.data),
+
+  chunkContext: (id: number, idx: number, window = 1) =>
+    http
+      .get<ChunkContext>(`/documents/${id}/chunk-context`, { params: { idx, window } })
+      .then((r) => r.data),
+
+  chunks: (id: number) =>
+    http.get<DocChunks>(`/documents/${id}/chunks`).then((r) => r.data),
 
   /** 以带鉴权的 fetch 下载原始文件并返回 Blob URL（调用方负责 revokeObjectURL）。 */
   rawBlobUrl: async (id: number): Promise<string> => {

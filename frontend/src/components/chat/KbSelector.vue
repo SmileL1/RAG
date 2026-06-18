@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NSelect } from 'naive-ui'
+import { Icon } from '@iconify/vue'
 import { useKnowledgeStore } from '@/stores/knowledge'
 
 const kbStore = useKnowledgeStore()
@@ -19,14 +20,20 @@ const value = computed({
 
 <template>
   <div class="selector">
-    <span class="label">📚 当前知识库</span>
-    <NSelect
-      v-model:value="value"
-      :options="options"
-      placeholder="选择一个知识库"
-      size="small"
-      style="width: 200px"
-    />
+    <div class="kb-dot">
+      <Icon icon="ph:stack-duotone" />
+    </div>
+    <div class="kb-meta">
+      <div class="kb-eyebrow">当前知识库</div>
+      <NSelect
+        v-model:value="value"
+        :options="options"
+        placeholder="选择一个知识库"
+        size="small"
+        :consistent-menu-width="false"
+        style="width: 190px"
+      />
+    </div>
   </div>
 </template>
 
@@ -34,10 +41,36 @@ const value = computed({
 .selector {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 10px;
+  padding: 6px 12px 6px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-glass);
+  flex-shrink: 0;
 }
-.label {
-  color: var(--text-secondary);
+.kb-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.kb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.kb-eyebrow {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-left: 2px;
 }
 </style>

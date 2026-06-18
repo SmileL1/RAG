@@ -26,7 +26,9 @@
       "WebFetch(domain:nexla.com)",
       "WebFetch(domain:ragflow.io)",
       "WebFetch(domain:aishwaryasrinivasan.substack.com)",
-      "Bash(.venv\\\\Scripts\\\\alembic upgrade *)"
+      "Bash(.venv\\\\Scripts\\\\alembic upgrade *)",
+      "Bash(docker exec *)",
+      "Bash(grep -v \"GET /health\\\\|HEAD /\\\\|GET /api/tags\")"
     ]
   }
 }

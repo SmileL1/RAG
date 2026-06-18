@@ -1,4 +1,4 @@
-/* 按钮 + 文字渐变 + 光斑装饰 */
+/* 按钮 + 文字渐变 + 背景柔光（当代 SaaS：单一实色 accent，克制） */
 
 .btn-neon {
   position: relative;
@@ -7,37 +7,25 @@
   justify-content: center;
   padding: 10px 22px;
   border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
   cursor: pointer;
   color: #fff;
-  background: var(--brand-gradient);
+  background: var(--accent);
   box-shadow: var(--shadow-neon);
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 .btn-neon:hover {
+  background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(37, 99, 235, 0.38);
+  box-shadow: 0 4px 16px rgba(91, 79, 232, 0.34);
 }
-.btn-neon::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.25),
-    transparent
-  );
-  transition: left 0.6s ease;
-}
-.btn-neon:hover::after {
-  left: 150%;
+.btn-neon:active {
+  background: var(--accent-pressed);
+  transform: translateY(0);
 }
 
 .text-gradient {
@@ -51,18 +39,18 @@
   background: var(--brand-gradient);
 }
 
-/* 背景柔光 */
+/* 背景柔光：亮色底下极淡的环境紫，仅作氛围，不抢内容 */
 .glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
+  filter: blur(90px);
+  opacity: 0.1;
   pointer-events: none;
   z-index: 0;
 }
 .glow-orb--purple {
-  background: #2563EB;
+  background: #6A5FF0;
 }
 .glow-orb--cyan {
-  background: #0EA5E9;
+  background: #9C8CFB;
 }

@@ -7,21 +7,23 @@
 
 - **多格式文档**：PDF · Word · Markdown · TXT · HTML
 - **语义检索 + Rerank**：Qdrant 向量检索（Top-10）→ bge-reranker-v2-m3 精排（Top-5）
-- **流式问答（SSE）**：边生成边显示，答案附带原文溯源（含相关度百分比）
+- **流式问答（SSE）**：边生成边显示，答案附带原文溯源（相关度按本次结果相对归一化展示）
+- **原文溯源查看**：点击任一引用，右侧抽屉展示该文档**完整原文**并**黄色高亮命中段**、自动定位，可下载原文件
 - **Embedding 双通道**：阿里云 DashScope API / 本地 bge-m3，`.env` 一键切换
-- **LLM 可插拔**：DeepSeek / OpenAI / 通义 / Kimi，兼容 OpenAI 协议
+- **LLM 可插拔**：DeepSeek / OpenAI / 通义 / Kimi / **Ollama 本地**，统一走 OpenAI 兼容协议
+- **页面内配置 LLM**：设置页直接切换供应商（含预设）、改地址/模型/Key、**测试连接**，保存即时生效并写回 `.env`（重启不丢）
 - **JWT 登录鉴权**：所有 API 受保护，token 7 天有效
 - **用户管理**：Admin 可创建账号、重置密码、启用/禁用、升降权限
 - **多知识库**：按项目/主题独立管理，互不干扰
-- **亮色 UI**：蓝白玻璃态主题
+- **当代 SaaS 亮色 UI**：紫罗兰（#5B4FE8）accent + 锐利卡片 + 76px 图标导航轨
 
 ## 技术栈
 
 | 层 | 技术 |
 |----|------|
 | 后端 | Python 3.11 · FastAPI · SQLAlchemy（异步）· Alembic |
-| RAG | FlagEmbedding（bge-m3）· Qdrant · bge-reranker-v2-m3 |
-| LLM | DeepSeek（via OpenAI 兼容协议） |
+| RAG | LlamaIndex 分块 · FlagEmbedding（bge-m3）· Qdrant · bge-reranker-v2-m3 |
+| LLM | DeepSeek / OpenAI / 通义 / Kimi / Ollama（统一 OpenAI 兼容协议） |
 | 认证 | JWT（python-jose）· bcrypt 密码哈希 |
 | 前端 | Vue 3 · TypeScript · Vite · Pinia · Naive UI |
 | 存储 | PostgreSQL（元数据 + 用户）· Qdrant（向量） |
@@ -102,6 +104,107 @@ npm run dev
 
 **请登录后立即在「用户管理」页修改 admin 密码。**
 
+## 在设置页配置 LLM（含 Ollama 本地）
+
+除了改 `.env`，登录后可在 **设置页** 直接配置 LLM，**保存即时生效并写回 `.env`**（重启依然生效）：
+
+- **供应商预设**：选「DeepSeek / 通义千问(DashScope) / Kimi / OpenAI / Ollama 本地 / 自定义」会自动填好 API 地址与默认模型，仍可手动改。
+- **API Key**：密码态输入、读取时遮蔽（只显示 `sk-xx****xxxx`）；Ollama 本地无需 Key，留空即可。
+- **测试连接**：用当前配置发一次最小调用，确认地址/模型/Key 是否连通。
+
+### 用 Ollama 跑本地模型（离线、不花钱）
+
+1. 安装并启动 [Ollama](https://ollama.com)，拉一个模型，例如：
+   ```bash
+   ollama pull qwen2.5:3b      # 或 qwen2.5:1.5b（更快）/ gemma3 等
+   ```
+2. 设置页 → 供应商选 **Ollama 本地**（地址自动填 `http://localhost:11434/v1`）→ 点「刷新」→ 模型下拉里选刚拉的模型 → Key 留空 → 保存 → 测试连接。
+
+> 说明：Gemini 等是闭源云端模型（需联网/代理）；想本地离线请用 Ollama + 开源模型（Qwen / Gemma 等）。纯 CPU 推理建议选 1.5B~3B 量化模型。
+
+## Docker 部署（生产）
+
+Docker Compose 一键拉起全部服务：PostgreSQL · Redis · Qdrant · 后端 · 前端 · Nginx。
+
+### 前置条件
+
+- Docker 20.10+（含 Docker Compose v2）
+- API Key：DeepSeek（LLM）、阿里云 DashScope（Embedding，或改用本地 bge-m3 则无需）
+
+### 第一步：准备配置文件
+
+```bash
+cd deploy
+cp .env.production.example .env.production
+```
+
+编辑 `.env.production`，**必填项**：
+
+| 变量 | 说明 |
+|------|------|
+| `JWT_SECRET` | 随机长字符串，至少 32 位 |
+| `ADMIN_PASSWORD` | 管理员初始密码 |
+| `POSTGRES_PASSWORD` | 数据库密码（同时更新 `DATABASE_URL` 中的密码） |
+| `DASHSCOPE_API_KEY` | 阿里云 DashScope Key（使用 `dashscope` Embedding 时必填） |
+| `LLM_API_KEY` | LLM 服务 Key |
+| `CORS_ORIGINS` | 允许访问的前端地址，如 `http://your-server-ip` |
+
+### 第二步：启动服务
+
+```bash
+# 标准模式（INGEST_MODE=sync，无需 Celery，推荐）
+docker compose --env-file .env.production up -d
+
+# 如需独立 Celery Worker（INGEST_MODE=celery 时）
+docker compose --env-file .env.production --profile celery up -d
+```
+
+> **首次启动说明**：后端会自动下载 bge-reranker-v2-m3（约 2GB）并运行 Alembic 迁移建表，
+> 启动完成约需 3~5 分钟。可通过 `docker logs -f rag-backend` 观察进度。
+
+### 第三步：访问
+
+| 地址 | 说明 |
+|------|------|
+| `http://your-server-ip:8080` | 前端页面（Nginx 代理） |
+| `http://your-server-ip:8000/docs` | 后端 Swagger UI |
+
+默认管理员：`admin` / `.env.production` 中设置的 `ADMIN_PASSWORD`。
+
+### 常用运维命令
+
+```bash
+# 查看所有服务状态
+docker compose --env-file .env.production ps
+
+# 查看后端日志
+docker logs -f rag-backend
+
+# 停止所有服务
+docker compose --env-file .env.production down
+
+# 停止并删除数据卷（⚠️ 会清空数据库和向量库）
+docker compose --env-file .env.production down -v
+
+# 重新构建镜像（代码更新后）
+docker compose --env-file .env.production build
+docker compose --env-file .env.production up -d
+```
+
+### 数据持久化
+
+Compose 文件声明了以下具名卷，数据在容器重建后不丢失：
+
+| 卷名 | 内容 |
+|------|------|
+| `pg_data` | PostgreSQL 数据 |
+| `qdrant_data` | Qdrant 向量数据 |
+| `uploads` | 用户上传的原始文件 |
+| `hf_cache` | HuggingFace 模型缓存（bge-reranker，避免重复下载） |
+| `ollama_data` | Ollama 模型缓存（避免每次重启重新下载） |
+
+---
+
 ## 环境变量说明（.env）
 
 ```dotenv
@@ -117,10 +220,11 @@ EMBEDDING_PROVIDER=dashscope      # dashscope | local_bge
 DASHSCOPE_API_KEY=sk-xxx
 
 # ===== LLM =====
-LLM_PROVIDER=deepseek
-LLM_API_BASE=https://api.deepseek.com/v1
-LLM_API_KEY=sk-xxx
-LLM_MODEL=deepseek-chat
+# 这组（供应商/地址/模型/Key）与下方检索参数也可在「设置页」运行时修改并写回本文件
+LLM_PROVIDER=deepseek                              # deepseek | openai | qwen | kimi | ollama | 自定义
+LLM_API_BASE=https://api.deepseek.com/v1          # Ollama 本地：http://localhost:11434/v1
+LLM_API_KEY=sk-xxx                                # Ollama 本地可填任意占位（如 ollama）
+LLM_MODEL=deepseek-chat                           # Ollama 例：qwen2.5:3b
 
 # ===== JWT 认证 =====
 JWT_SECRET=请修改为随机长字符串
@@ -167,9 +271,14 @@ Admin 登录后，侧边栏显示「用户管理」入口，支持：
 - [x] 后端 RAG 引擎（解析 / 分块 / Embedding / 检索 / Rerank / 流式生成）
 - [x] JWT 登录鉴权 + 用户管理
 - [x] 前端完整功能（知识库 / 文档上传 / 流式对话 / 引用溯源）
+- [x] 原文溯源查看（点击引用 → 右侧抽屉看完整原文 + 命中高亮 + 下载原文件）
+- [x] 设置页运行时配置 LLM（供应商预设 / API Key 遮蔽 / 测试连接 / 写回 .env）
+- [x] Ollama 本地模型支持（列出本机已装模型，下拉直选）
+- [x] 分块优化（Markdown 按 H1/H2 切节 + 通用碎块合并，避免「只含标题」的小块）
+- [x] 当代 SaaS 亮色 UI（紫罗兰 accent，全站统一）
 - [x] Reranker 性能优化（max_length=256 + 启动预热）
 - [x] Alembic 迁移完整（5 版本：init → 扩展字段 → users → is_admin）
-- [ ] 生产部署（Docker Compose）
+- [x] 生产部署（Docker Compose）
 
 ## 文档
 

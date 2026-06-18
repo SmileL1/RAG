@@ -1,61 +1,63 @@
-/* Naive UI 主题覆盖：蓝白亮色系 */
+/* Naive UI 主题覆盖：当代 SaaS 亮色系（深紫罗兰 accent） */
 import type { GlobalThemeOverrides } from 'naive-ui'
 
 export const naiveDarkOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: '#2563EB',
-    primaryColorHover: '#3B82F6',
-    primaryColorPressed: '#1D4ED8',
-    primaryColorSuppl: '#0EA5E9',
+    primaryColor: '#5B4FE8',
+    primaryColorHover: '#4A3FD4',
+    primaryColorPressed: '#3F35BE',
+    primaryColorSuppl: '#6A5FF0',
 
-    infoColor: '#0EA5E9',
-    successColor: '#10B981',
+    infoColor: '#5B4FE8',
+    successColor: '#0E9F6E',
     warningColor: '#F59E0B',
     errorColor: '#EF4444',
 
     bodyColor: 'transparent',
-    cardColor: 'rgba(255, 255, 255, 0.88)',
+    cardColor: '#FFFFFF',
     modalColor: '#FFFFFF',
     popoverColor: '#FFFFFF',
 
-    textColor1: '#0F172A',
-    textColor2: '#475569',
-    textColor3: '#94A3B8',
+    textColor1: '#15161B',
+    textColor2: '#4B4F5A',
+    textColor3: '#9498A4',
 
     borderRadius: '12px',
-    borderColor: 'rgba(37, 99, 235, 0.12)',
+    borderColor: '#ECEDF1',
 
     fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif',
+      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif",
   },
   Button: {
     borderRadiusMedium: '10px',
-    fontWeightStrong: '600',
+    fontWeightStrong: '700',
   },
   Card: {
-    borderRadius: '20px',
+    borderRadius: '16px',
     paddingMedium: '20px 24px',
-    color: 'rgba(255, 255, 255, 0.88)',
-    borderColor: 'rgba(37, 99, 235, 0.10)',
+    color: '#FFFFFF',
+    borderColor: '#ECEDF1',
   },
   Input: {
-    borderRadius: '12px',
+    borderRadius: '10px',
     color: '#FFFFFF',
-    borderColor: 'rgba(37, 99, 235, 0.15)',
-    borderFocusColor: '#2563EB',
+    borderColor: '#E2E4EA',
+    borderFocusColor: '#5B4FE8',
   },
   Menu: {
     itemHeight: '44px',
     borderRadius: '10px',
-    itemTextColor: '#475569',
-    itemTextColorActive: '#2563EB',
-    itemTextColorHover: '#0F172A',
-    itemColorActive: 'rgba(37, 99, 235, 0.10)',
-    itemColorHover: 'rgba(37, 99, 235, 0.06)',
+    itemTextColor: '#4B4F5A',
+    itemTextColorActive: '#5B4FE8',
+    itemTextColorActiveHover: '#4A3FD4',
+    itemTextColorHover: '#15161B',
+    itemColorActive: '#EEECFD',
+    itemColorActiveHover: '#EEECFD',
+    itemColorHover: '#F2F2F8',
     color: 'transparent',
   },
   Modal: {
     color: '#FFFFFF',
-    borderRadius: '20px',
+    borderRadius: '18px',
   },
 }

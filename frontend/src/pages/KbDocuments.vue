@@ -313,7 +313,7 @@ onMounted(load)
   align-items: center;
   gap: 8px;
 }
-.title-icon { color: #2563EB; font-size: 22px; }
+.title-icon { color: #5B4FE8; font-size: 22px; }
 .kb-desc {
   font-size: 12px;
   color: var(--text-muted);
@@ -362,7 +362,7 @@ onMounted(load)
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(37, 99, 235, 0.03);
+  background: rgba(91, 79, 232, 0.03);
   white-space: nowrap;
 }
 .doc-table td {
@@ -372,7 +372,7 @@ onMounted(load)
   vertical-align: middle;
 }
 .doc-table tr:last-child td { border-bottom: none; }
-.doc-table tr:hover td { background: rgba(37, 99, 235, 0.03); }
+.doc-table tr:hover td { background: rgba(91, 79, 232, 0.03); }
 
 .col-name {
   display: flex;
@@ -380,7 +380,7 @@ onMounted(load)
   gap: 8px;
   max-width: 360px;
 }
-.file-icon { font-size: 18px; color: #2563EB; flex-shrink: 0; }
+.file-icon { font-size: 18px; color: #5B4FE8; flex-shrink: 0; }
 .filename {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -403,7 +403,7 @@ onMounted(load)
 }
 .tag-ready      { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
 .tag-pending    { background: rgba(251, 191, 36, 0.12); color: #d97706; }
-.tag-processing { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+.tag-processing { background: rgba(106, 95, 240, 0.12); color: #5B4FE8; }
 .tag-failed     { background: rgba(239, 68, 68, 0.10); color: #dc2626; }
 
 .error-tip {
@@ -430,7 +430,7 @@ onMounted(load)
   transition: background 0.15s, color 0.15s;
 }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.action-btn:hover { background: rgba(37, 99, 235, 0.08); color: #2563EB; }
+.action-btn:hover { background: rgba(91, 79, 232, 0.08); color: #5B4FE8; }
 .action-btn.retry:hover { background: rgba(251, 191, 36, 0.12); color: #d97706; }
 .action-btn.danger:hover { background: rgba(239, 68, 68, 0.08); color: #dc2626; }
 
@@ -472,7 +472,7 @@ onMounted(load)
   min-width: 0;
   flex: 1;
 }
-.preview-file-icon { font-size: 20px; color: #2563EB; flex-shrink: 0; }
+.preview-file-icon { font-size: 20px; color: #5B4FE8; flex-shrink: 0; }
 .preview-filename {
   font-size: 14px;
   font-weight: 700;
@@ -510,7 +510,7 @@ onMounted(load)
   white-space: nowrap;
   transition: all 0.15s;
 }
-.btn-outline:hover { border-color: #2563EB; color: #2563EB; background: rgba(37,99,235,0.06); }
+.btn-outline:hover { border-color: #5B4FE8; color: #5B4FE8; background: rgba(91, 79, 232,0.06); }
 .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .close-btn {

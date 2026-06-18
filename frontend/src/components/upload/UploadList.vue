@@ -106,7 +106,7 @@ function fmtSize(b: number) {
   display: flex;
   gap: 12px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-secondary);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
 }

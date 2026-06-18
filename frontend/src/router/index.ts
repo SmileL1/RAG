@@ -17,7 +17,7 @@ const routes: RouteRecordRaw[] = [
         path: '',
         name: 'chat',
         component: () => import('@/pages/Chat.vue'),
-        meta: { title: '对话' },
+        meta: { title: '对话', fullBleed: true },
       },
       {
         path: 'knowledge',

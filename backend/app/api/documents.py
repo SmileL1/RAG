@@ -103,6 +103,53 @@ async def get_document_text(doc_id: int, db: AsyncSession = Depends(get_db)):
     return {"filename": doc.filename, "content": content, "chunk_count": len(chunks)}
 
 
+@router.get("/documents/{doc_id}/chunk-context")
+async def get_chunk_context(
+    doc_id: int,
+    idx: int,
+    window: int = 1,
+    db: AsyncSession = Depends(get_db),
+):
+    """返回指定 chunk_idx 及其前后 window 个片段，供原文溯源查看上下文。"""
+    doc = await db.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+    window = max(0, min(window, 3))
+    lo, hi = idx - window, idx + window
+    result = await db.execute(
+        select(Chunk)
+        .where(Chunk.document_id == doc_id, Chunk.chunk_idx >= lo, Chunk.chunk_idx <= hi)
+        .order_by(Chunk.chunk_idx)
+    )
+    chunks = result.scalars().all()
+    return {
+        "filename": doc.filename,
+        "doc_id": doc_id,
+        "target_idx": idx,
+        "chunks": [
+            {"chunk_idx": c.chunk_idx, "content": c.content, "is_hit": c.chunk_idx == idx}
+            for c in chunks
+        ],
+    }
+
+
+@router.get("/documents/{doc_id}/chunks")
+async def get_document_chunks(doc_id: int, db: AsyncSession = Depends(get_db)):
+    """返回文档全部片段（按 chunk_idx 排序），供溯源在全文中精确定位高亮命中段。"""
+    doc = await db.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+    result = await db.execute(
+        select(Chunk).where(Chunk.document_id == doc_id).order_by(Chunk.chunk_idx)
+    )
+    chunks = result.scalars().all()
+    return {
+        "filename": doc.filename,
+        "doc_id": doc_id,
+        "chunks": [{"chunk_idx": c.chunk_idx, "content": c.content} for c in chunks],
+    }
+
+
 @router.get("/documents/{doc_id}/raw")
 async def get_document_raw(doc_id: int, db: AsyncSession = Depends(get_db)):
     """返回原始文件流（用于在浏览器内联预览 PDF / TXT 等）。"""
@@ -160,6 +207,80 @@ async def retry_document(
 
     logger.info("文档重试已触发 doc_id={}", doc_id)
     return doc
+
+
+async def _reset_for_reingest(db: AsyncSession, doc: Document) -> None:
+    """清除某文档的旧 chunks + 向量，并把状态重置为 pending（为重新入库做准备）。"""
+    old_chunks = await db.execute(select(Chunk).where(Chunk.document_id == doc.id))
+    for chunk in old_chunks.scalars().all():
+        await db.delete(chunk)
+    store = get_vector_store()
+    await store.delete_by_doc_id(VectorStore.collection_name(doc.kb_id), doc_id=doc.id)
+    doc.status = "pending"
+    doc.error_message = None
+    doc.chunk_count = 0
+    doc.processed_at = None
+
+
+@router.post("/documents/{doc_id}/reindex", response_model=DocumentOut)
+async def reindex_document(
+    doc_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """重新切块入库（任意状态可用，含已 ready 的文档）。清旧 chunks/向量后重排。"""
+    doc = await db.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+    if not Path(doc.file_path).exists():
+        raise HTTPException(404, "原始文件已从磁盘删除，无法重新索引")
+
+    await _reset_for_reingest(db, doc)
+    await db.commit()
+    await db.refresh(doc)
+
+    if settings.INGEST_MODE == "celery":
+        from app.tasks.document_tasks import process_document
+        process_document.delay(doc.id)
+    else:
+        background_tasks.add_task(_ingest_in_background, doc.id)
+
+    logger.info("文档重新索引已触发 doc_id={}", doc_id)
+    return doc
+
+
+@router.post("/documents/reindex-all")
+async def reindex_all_documents(
+    background_tasks: BackgroundTasks,
+    kb_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """批量重新索引（可选按 kb_id 过滤）。逐个清旧数据并排队重排，返回触发数量。"""
+    stmt = select(Document)
+    if kb_id is not None:
+        stmt = stmt.where(Document.kb_id == kb_id)
+    docs = (await db.execute(stmt)).scalars().all()
+
+    triggered, skipped = 0, 0
+    queued_ids: list[int] = []
+    for doc in docs:
+        if not Path(doc.file_path).exists():
+            skipped += 1
+            continue
+        await _reset_for_reingest(db, doc)
+        queued_ids.append(doc.id)
+        triggered += 1
+    await db.commit()
+
+    for did in queued_ids:
+        if settings.INGEST_MODE == "celery":
+            from app.tasks.document_tasks import process_document
+            process_document.delay(did)
+        else:
+            background_tasks.add_task(_ingest_in_background, did)
+
+    logger.info("批量重新索引：触发 {} 个，跳过 {} 个（文件缺失）", triggered, skipped)
+    return {"triggered": triggered, "skipped": skipped, "total": len(docs)}
 
 
 @router.delete("/documents/{doc_id}", response_model=MessageResponse)

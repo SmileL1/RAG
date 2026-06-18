@@ -1,38 +1,25 @@
-/* 玻璃态卡片 + 蓝色边描 */
+/* 卡片：实色白面 + 锐利 1px 边界 + 柔和真实阴影（当代 SaaS，无毛玻璃 blur）
+ * 类名沿用 .glass-card 以兼容现有组件 */
 
 .glass-card {
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass);
   position: relative;
-  transition: all 0.25s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .glass-card:hover {
-  background: var(--bg-card-hover);
-  border-color: rgba(37, 99, 235, 0.20);
-  box-shadow: 0 6px 28px rgba(37, 99, 235, 0.10);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-pop);
 }
 
-/* 顶部 1px 渐变描边 */
+/* accent 强调卡：左侧不再用彩条（slop），改为聚焦时的淡紫描边 */
 .glass-card-neon {
   position: relative;
 }
-.glass-card-neon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: var(--brand-gradient);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
-  opacity: 0.35;
-  pointer-events: none;
+.glass-card-neon:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }

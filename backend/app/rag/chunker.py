@@ -19,6 +19,9 @@ from app.rag.parsers.base import ParsedSegment
 # 中英文标点；末尾问号叹号也是 sentence 终止符
 _CN_REGEX = r"[^,.;。？！；，]+[,.;。？！；，]?"
 
+# 小于这么多字符的块视为「碎块」，合并到相邻块（适用于所有格式：标题行、残句等）
+_MIN_CHUNK_CHARS = 60
+
 
 class ChunkData(BaseModel):
     text: str
@@ -53,10 +56,16 @@ class Chunker:
                 if not p:
                     continue
                 meta = dict(seg.metadata)
-                meta["chunk_idx"] = global_idx
                 meta["sub_chunk_idx"] = sub_idx
                 result.append(ChunkData(text=p, metadata=meta))
-                global_idx += 1
+
+        # 合并碎块：把过短的块并入相邻块（默认并入上一块；首块并入下一块）
+        result = self._merge_small(result)
+
+        # 重新编全局 chunk_idx
+        for i, c in enumerate(result):
+            c.metadata["chunk_idx"] = i
+
         logger.debug(
             "Chunker: {} segments → {} chunks (size={}, overlap={})",
             len(segments),
@@ -65,3 +74,35 @@ class Chunker:
             self._chunk_overlap,
         )
         return result
+
+    @staticmethod
+    def _merge_small(chunks: list[ChunkData]) -> list[ChunkData]:
+        if not chunks:
+            return chunks
+        merged: list[ChunkData] = []
+        carry: ChunkData | None = None  # 暂存：还没有可并入的「上一块」时的碎块
+        for c in chunks:
+            small = len(c.text) < _MIN_CHUNK_CHARS
+            if small and merged:
+                # 并入上一块
+                prev = merged[-1]
+                prev.text = (prev.text + "\n" + c.text).strip()
+                continue
+            if small and not merged:
+                # 还没有上一块，先攒着，拼到下一块前面
+                if carry is None:
+                    carry = ChunkData(text=c.text, metadata=dict(c.metadata))
+                else:
+                    carry.text = (carry.text + "\n" + c.text).strip()
+                continue
+            if carry is not None:
+                c = ChunkData(text=(carry.text + "\n" + c.text).strip(), metadata=dict(c.metadata))
+                carry = None
+            merged.append(c)
+        # 整批都很碎，只剩 carry
+        if carry is not None:
+            if merged:
+                merged[-1].text = (merged[-1].text + "\n" + carry.text).strip()
+            else:
+                merged.append(carry)
+        return merged

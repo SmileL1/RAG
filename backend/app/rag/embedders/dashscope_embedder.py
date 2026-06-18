@@ -2,7 +2,7 @@
 
 Docs: https://help.aliyun.com/zh/dashscope/developer-reference/text-embedding-synchronous-api
 - 模型：text-embedding-v3
-- 单次最多 25 条文本、单条最长 8192 token
+- 单次最多 10 条文本、单条最长 8192 token（批量上限以服务端为准）
 - 维度：默认 1024（也支持 512/768/1536）
 """
 from __future__ import annotations
@@ -15,7 +15,8 @@ from app.core.exceptions import EmbeddingError
 from app.rag.embedders.base import BaseEmbedder
 
 DASHSCOPE_COMPAT_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-MAX_BATCH = 25
+# DashScope text-embedding 接口单次最多 10 条输入（超过会报 InvalidParameter）
+MAX_BATCH = 10
 
 
 class DashScopeEmbedder(BaseEmbedder):

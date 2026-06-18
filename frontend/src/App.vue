@@ -5,7 +5,6 @@ import {
   NLoadingBarProvider,
   NMessageProvider,
   NNotificationProvider,
-  darkTheme,
   zhCN,
   dateZhCN,
 } from 'naive-ui'
@@ -14,7 +13,6 @@ import { naiveDarkOverrides } from '@/theme/naive'
 
 <template>
   <NConfigProvider
-    :theme="darkTheme"
     :theme-overrides="naiveDarkOverrides"
     :locale="zhCN"
     :date-locale="dateZhCN"

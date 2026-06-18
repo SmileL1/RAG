@@ -107,8 +107,8 @@ async function submit() {
   justify-content: center;
   background: var(--bg-primary);
   background-image:
-    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(37, 99, 235, 0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(14, 165, 233, 0.08) 0%, transparent 60%);
+    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(91, 79, 232, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(91, 79, 232, 0.08) 0%, transparent 60%);
 }
 
 .login-card {
@@ -193,8 +193,8 @@ async function submit() {
   box-sizing: border-box;
 }
 .input-wrap input:focus {
-  border-color: #2563EB;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: #5B4FE8;
+  box-shadow: 0 0 0 3px rgba(91, 79, 232, 0.12);
 }
 .input-wrap input:disabled {
   opacity: 0.6;

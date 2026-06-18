@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useMessage } from 'naive-ui'
 import { settingsApi, type AppSettings, type SettingsPatch } from '@/api/settings'
@@ -40,15 +40,77 @@ async function changePassword() {
   }
 }
 
+// 供应商预设：选中后自动填入对应 API 地址与默认模型
+const LLM_PRESETS: Record<string, { label: string; base: string; model: string }> = {
+  deepseek: { label: 'DeepSeek', base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  qwen: { label: '通义千问 (DashScope)', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  kimi: { label: 'Kimi (Moonshot)', base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+  openai: { label: 'OpenAI', base: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  ollama: { label: 'Ollama 本地', base: 'http://localhost:11434/v1', model: '' },
+  custom: { label: '自定义', base: '', model: '' },
+}
+
+const providerOptions = computed(() => {
+  const opts = Object.entries(LLM_PRESETS).map(([value, p]) => ({ value, label: p.label }))
+  const cur = form.value.LLM_PROVIDER
+  if (cur && !(cur in LLM_PRESETS)) opts.unshift({ value: cur, label: cur })
+  return opts
+})
+
+function onProviderChange(e: Event) {
+  const value = (e.target as HTMLSelectElement).value
+  form.value.LLM_PROVIDER = value
+  const preset = LLM_PRESETS[value]
+  // 选预设（非自定义）时自动填地址+模型，方便一键切换；仍可手动改
+  if (preset && value !== 'custom') {
+    form.value.LLM_API_BASE = preset.base
+    form.value.LLM_MODEL = preset.model
+  }
+  if (value === 'ollama') fetchOllamaModels()
+}
+
+// ===== Ollama 本地模型 =====
+const isOllama = computed(() => {
+  const b = form.value.LLM_API_BASE || ''
+  return form.value.LLM_PROVIDER === 'ollama' || b.includes('11434') || b.includes('ollama')
+})
+const ollamaModels = ref<string[]>([])
+const ollamaMsg = ref('')
+const loadingModels = ref(false)
+
+async function fetchOllamaModels() {
+  loadingModels.value = true
+  ollamaMsg.value = ''
+  try {
+    const res = await settingsApi.ollamaModels(form.value.LLM_API_BASE)
+    ollamaModels.value = res.models
+    ollamaMsg.value = res.message
+    // 若当前模型不在列表里，自动选第一个本地模型
+    if (res.models.length && !res.models.includes(form.value.LLM_MODEL || '')) {
+      form.value.LLM_MODEL = res.models[0]
+    }
+  } catch (e: unknown) {
+    ollamaMsg.value = (e as Error).message
+  } finally {
+    loadingModels.value = false
+  }
+}
+
 // 可编辑字段的本地副本
 const form = ref<SettingsPatch>({})
+// API Key 单独管理：输入框默认空，留空表示不修改；非空才提交
+const apiKeyInput = ref('')
+const showKey = ref(false)
+const testing = ref(false)
 
 async function load() {
   loading.value = true
   try {
     const data = await settingsApi.get()
     current.value = data
+    apiKeyInput.value = '' // 不回填明文，仅用占位符展示遮蔽串
     form.value = {
+      LLM_PROVIDER: data.LLM_PROVIDER,
       LLM_API_BASE: data.LLM_API_BASE,
       LLM_MODEL: data.LLM_MODEL,
       LLM_TEMPERATURE: data.LLM_TEMPERATURE,
@@ -58,6 +120,7 @@ async function load() {
       RERANK_TOP_K: data.RERANK_TOP_K,
       USE_HYDE: data.USE_HYDE,
     }
+    if (isOllama.value) fetchOllamaModels()
   } catch (e: unknown) {
     message.error((e as Error).message)
   } finally {
@@ -68,13 +131,33 @@ async function load() {
 async function save() {
   saving.value = true
   try {
-    const updated = await settingsApi.patch(form.value)
+    const payload: SettingsPatch = { ...form.value }
+    const key = apiKeyInput.value.trim()
+    if (key) payload.LLM_API_KEY = key // 仅在填写了新 key 时才提交
+    const updated = await settingsApi.patch(payload)
     current.value = updated
-    message.success('已保存（当前进程生效，重启后恢复 .env 值）')
+    apiKeyInput.value = ''
+    message.success('已保存并写入 .env，重启后依然生效')
   } catch (e: unknown) {
     message.error((e as Error).message)
   } finally {
     saving.value = false
+  }
+}
+
+async function testConnection() {
+  testing.value = true
+  try {
+    const res = await settingsApi.testLlm()
+    if (res.ok) {
+      message.success(`连接成功${res.reply ? '：' + res.reply : ''}`)
+    } else {
+      message.error('连接失败：' + res.message)
+    }
+  } catch (e: unknown) {
+    message.error((e as Error).message)
+  } finally {
+    testing.value = false
   }
 }
 
@@ -99,12 +182,54 @@ onMounted(load)
         </div>
         <div class="fields">
           <div class="field">
+            <label>供应商 <span class="field-hint">选预设会自动填入地址与默认模型，仍可手动改</span></label>
+            <select class="select" :value="form.LLM_PROVIDER" @change="onProviderChange">
+              <option v-for="opt in providerOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="field">
             <label>API 地址</label>
             <input v-model="form.LLM_API_BASE" type="text" placeholder="https://api.deepseek.com/v1" />
           </div>
           <div class="field">
-            <label>模型名称</label>
-            <input v-model="form.LLM_MODEL" type="text" placeholder="deepseek-chat" />
+            <label>
+              模型名称
+              <span v-if="isOllama" class="field-hint">本机 Ollama 已安装的模型，可直接选</span>
+            </label>
+            <!-- Ollama：本地模型下拉 + 刷新 -->
+            <div v-if="isOllama" class="ollama-row">
+              <select v-if="ollamaModels.length" class="select" v-model="form.LLM_MODEL">
+                <option v-for="m in ollamaModels" :key="m" :value="m">{{ m }}</option>
+              </select>
+              <input v-else v-model="form.LLM_MODEL" type="text" placeholder="如 llama3.1 / qwen2.5（或点刷新检测）" />
+              <button class="test-btn" :disabled="loadingModels" @click="fetchOllamaModels">
+                <Icon :icon="loadingModels ? 'ph:circle-notch-bold' : 'ph:arrows-clockwise-duotone'" :class="{ spin: loadingModels }" />
+                {{ loadingModels ? '检测中…' : '刷新' }}
+              </button>
+            </div>
+            <input v-else v-model="form.LLM_MODEL" type="text" placeholder="deepseek-chat" />
+            <span v-if="isOllama && ollamaMsg" class="ollama-msg" :class="{ warn: !ollamaModels.length }">{{ ollamaMsg }}</span>
+          </div>
+          <div class="field">
+            <label>
+              API Key
+              <span class="field-hint">
+                <template v-if="isOllama">Ollama 本地无需 Key，留空即可</template>
+                <template v-else>{{ current.LLM_API_KEY_SET ? '已设置 ' + current.LLM_API_KEY_MASKED + '，留空则不修改' : '尚未设置' }}</template>
+              </span>
+            </label>
+            <div class="key-wrap">
+              <input
+                v-model="apiKeyInput"
+                :type="showKey ? 'text' : 'password'"
+                placeholder="粘贴新的 API Key（sk-...）"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="key-eye" type="button" tabindex="-1" @click="showKey = !showKey" :title="showKey ? '隐藏' : '显示'">
+                <Icon :icon="showKey ? 'ph:eye-slash-duotone' : 'ph:eye-duotone'" />
+              </button>
+            </div>
           </div>
           <div class="field field-half">
             <label>Temperature <span class="field-hint">0~2，越高越随机</span></label>
@@ -113,10 +238,6 @@ onMounted(load)
           <div class="field field-half">
             <label>Max Tokens <span class="field-hint">最大输出长度</span></label>
             <input v-model.number="form.LLM_MAX_TOKENS" type="number" min="256" max="8192" step="256" />
-          </div>
-          <div class="field readonly-field">
-            <label>LLM 供应商 <span class="badge-ro">只读</span></label>
-            <code>{{ current.LLM_PROVIDER }}</code>
           </div>
         </div>
       </div>
@@ -190,7 +311,11 @@ onMounted(load)
           <Icon :icon="saving ? 'ph:circle-notch-bold' : 'ph:floppy-disk-duotone'" :class="{ spin: saving }" />
           {{ saving ? '保存中…' : '保存' }}
         </button>
-        <span class="save-hint">修改在当前进程内立即生效，重启后恢复 .env 的值</span>
+        <button class="test-btn" :disabled="testing" @click="testConnection">
+          <Icon :icon="testing ? 'ph:circle-notch-bold' : 'ph:plug-charging-duotone'" :class="{ spin: testing }" />
+          {{ testing ? '测试中…' : '测试连接' }}
+        </button>
+        <span class="save-hint">保存后即时生效并写入 .env（重启不丢）；测试连接用当前已保存的配置发一次最小调用</span>
       </div>
     </template>
 
@@ -259,7 +384,7 @@ onMounted(load)
   font-weight: 700;
   color: var(--text-primary);
 }
-.section-icon { font-size: 20px; color: #2563EB; }
+.section-icon { font-size: 20px; color: #5B4FE8; }
 
 .fields { display: flex; flex-wrap: wrap; gap: 14px; }
 
@@ -286,12 +411,62 @@ onMounted(load)
   padding: 9px 12px;
   border: 1.5px solid var(--border-subtle);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 13px;
   outline: none;
 }
-.field input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+.field input:focus { border-color: #5B4FE8; box-shadow: 0 0 0 3px rgba(91, 79, 232, 0.1); }
+
+.select {
+  padding: 9px 12px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239498A4' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+.select:focus { border-color: #5B4FE8; box-shadow: 0 0 0 3px rgba(91, 79, 232, 0.1); }
+
+.ollama-row { display: flex; gap: 10px; align-items: center; }
+.ollama-row .select,
+.ollama-row input { flex: 1; }
+.ollama-msg { font-size: 11.5px; color: var(--color-success); margin-top: 2px; }
+.ollama-msg.warn { color: var(--color-warning); }
+
+.key-wrap { position: relative; display: flex; align-items: center; }
+.key-wrap input {
+  width: 100%;
+  padding: 9px 40px 9px 12px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-mono);
+  outline: none;
+}
+.key-wrap input:focus { border-color: #5B4FE8; box-shadow: 0 0 0 3px rgba(91, 79, 232, 0.1); }
+.key-eye {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  padding: 2px;
+}
+.key-eye:hover { color: var(--accent); }
 
 .field-row {
   flex-direction: row;
@@ -303,8 +478,8 @@ onMounted(load)
 .readonly-field { opacity: 0.6; }
 .readonly-field code {
   font-size: 13px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #2563EB;
+  background: rgba(91, 79, 232, 0.08);
+  color: #5B4FE8;
   padding: 4px 10px;
   border-radius: 6px;
   font-family: var(--font-mono);
@@ -318,7 +493,7 @@ onMounted(load)
   position: relative; transition: background 0.2s; padding: 0;
   flex-shrink: 0;
 }
-.toggle-btn.active { background: #2563EB; }
+.toggle-btn.active { background: #5B4FE8; }
 .toggle-knob {
   position: absolute; top: 3px; left: 3px;
   width: 16px; height: 16px;
@@ -337,7 +512,7 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.04);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 8px 14px;
@@ -345,8 +520,8 @@ onMounted(load)
 .ro-label { font-size: 12px; color: var(--text-muted); }
 .ro-item code {
   font-size: 12px;
-  background: rgba(37,99,235,0.08);
-  color: #2563EB;
+  background: rgba(91, 79, 232,0.08);
+  color: #5B4FE8;
   padding: 2px 8px;
   border-radius: 4px;
   font-family: var(--font-mono);
@@ -370,7 +545,26 @@ onMounted(load)
   flex-shrink: 0;
 }
 .save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.save-hint { font-size: 12px; color: var(--text-muted); }
+
+.test-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--border-neon);
+  transition: background 0.15s, border-color 0.15s;
+}
+.test-btn:hover:not(:disabled) { background: #E5E2FB; }
+.test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.save-hint { font-size: 12px; color: var(--text-muted); flex: 1 1 100%; }
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }

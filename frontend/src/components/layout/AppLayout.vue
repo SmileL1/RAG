@@ -1,56 +1,49 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
-import TopBar from './TopBar.vue'
-import GlowOrb from '@/components/common/GlowOrb.vue'
+
+const route = useRoute()
+const fullBleed = computed(() => Boolean(route.meta?.fullBleed))
 </script>
 
 <template>
   <div class="layout">
-    <!-- 背景柔光 -->
-    <GlowOrb color="purple" :size="500" top="-200px" left="-200px" :opacity="0.3" />
-    <GlowOrb color="cyan" :size="600" bottom="-300px" right="-200px" :opacity="0.25" />
-
-    <div class="layout-inner">
-      <Sidebar />
-      <main class="main">
-        <TopBar />
-        <div class="content">
-          <RouterView />
-        </div>
-      </main>
-    </div>
+    <Sidebar />
+    <main class="main">
+      <div class="content" :class="{ bleed: fullBleed }">
+        <RouterView />
+      </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
 .layout {
-  position: relative;
+  display: flex;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-}
-.layout-inner {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  padding: 14px;
-  gap: 14px;
+  background: var(--bg-primary);
 }
 .main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(8px);
   overflow: hidden;
 }
 .content {
   flex: 1;
+  min-height: 0;
+}
+/* 普通页：带边距、可滚动 */
+.content:not(.bleed) {
   overflow: auto;
-  padding: 24px;
+  padding: 28px 32px;
+}
+/* 对话页：全屏铺满，内部自行滚动 */
+.content.bleed {
+  overflow: hidden;
 }
 </style>

@@ -539,24 +539,31 @@ RAG 准确率提升 **14%**，块数量增加约 5 倍（更细粒度）。
 
 ## 7. 本项目的分块实现
 
-### 当前使用的策略（已叠加两层）
+### 当前使用的策略（已叠加三层）
 
 ```
 文件
  ↓
 【第一层：结构感知分段】← 各 Parser 负责
-  Markdown → 按 # 标题切段，保留 section 信息
+  Markdown → 仅按 H1/H2 切节（H3~H6 连同正文留在所属大节内），保留 section 信息
+            并把「只剩标题」的超小段并入下一段（避免孤立标题成块）
   DOCX     → 按 Heading 样式切段，保留标题层级
   PDF      → 按页切段，保留页码信息
   TXT/HTML → 整文档一段（无结构信息）
  ↓
-【第二层：递归字符分块】← Chunker 负责
+【第二层：句子感知分块】← Chunker 负责
   SentenceSplitter（LlamaIndex）
-  优先级：段落（\n\n）→ 中文标点（。！？；，）→ 字符
+  优先级：段落（\n\n）→ 中英文标点（。！？；，.;）→ 字符
   默认：chunk_size=512，overlap=50
  ↓
+【第三层：碎块合并】← Chunker._merge_small（通用，所有格式生效）
+  <60 字的碎块（残留标题/短句）自动并入相邻块，再重编全局 chunk_idx
+ ↓
 Embedding → 向量数据库（Qdrant）
+  注：DashScope 单批 ≤10 条（MAX_BATCH=10），分块过多时按批循环发送
 ```
+
+> **踩坑记录**：早期 Markdown 解析按 `#{1,6}` 每级标题都切段，当「标题紧跟子标题、中间无正文」时（如 `## 二、为什么用RAG?` 紧跟 `### 2.1 …`），会切出只含一行标题的超小块。它信息量极低却因关键词高度匹配被排到第一，溯源点开只有一行标题。修复 = 第一层只切 H1/H2 + 第三层碎块合并双保险。改完分块逻辑需对旧文档**重新索引**（`POST /api/documents/reindex-all`）才生效。
 
 ### 每个块保存的 metadata
 
@@ -575,10 +582,11 @@ Embedding → 向量数据库（Qdrant）
 ### 配置项（backend/.env）
 
 ```dotenv
-CHUNK_SIZE=512      # 每块最大字符数，可调小提高精度
-CHUNK_OVERLAP=50    # 相邻块重叠字符数
-RETRIEVE_TOP_K=20   # 向量检索粗筛数量
+CHUNK_SIZE=512      # 每块目标 token 数（约几百中文字），可调小提高精度
+CHUNK_OVERLAP=50    # 相邻块重叠 token 数
+RETRIEVE_TOP_K=10   # 向量检索粗筛数量
 RERANK_TOP_K=5      # Rerank 后精排数量
+# 以上 LLM/检索参数也可在「设置页」运行时修改并写回 .env
 ```
 
 ---

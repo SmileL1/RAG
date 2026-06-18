@@ -280,7 +280,7 @@ onMounted(load)
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(37, 99, 235, 0.03);
+  background: rgba(91, 79, 232, 0.03);
 }
 .user-table td {
   padding: 12px 16px;
@@ -288,7 +288,7 @@ onMounted(load)
   color: var(--text-primary);
 }
 .user-table tr:last-child td { border-bottom: none; }
-.user-table tr:hover td { background: rgba(37, 99, 235, 0.03); }
+.user-table tr:hover td { background: rgba(91, 79, 232, 0.03); }
 
 .col-name {
   display: flex;
@@ -296,7 +296,7 @@ onMounted(load)
   gap: 8px;
   font-weight: 500;
 }
-.user-icon { font-size: 18px; color: #2563EB; }
+.user-icon { font-size: 18px; color: #5B4FE8; }
 .col-date { color: var(--text-muted); font-size: 12px; }
 .col-actions { display: flex; gap: 4px; }
 
@@ -307,7 +307,7 @@ onMounted(load)
   font-size: 11px;
   font-weight: 600;
 }
-.tag-admin   { background: rgba(37,99,235,0.12); color: #2563EB; }
+.tag-admin   { background: rgba(91, 79, 232,0.12); color: #5B4FE8; }
 .tag-user    { background: rgba(0,0,0,0.06); color: var(--text-secondary); }
 .tag-active  { background: rgba(34,197,94,0.12); color: #16a34a; }
 .tag-inactive{ background: rgba(239,68,68,0.10); color: #dc2626; }
@@ -325,7 +325,7 @@ onMounted(load)
   font-size: 15px;
   transition: background 0.15s, color 0.15s;
 }
-.action-btn:hover { background: rgba(37,99,235,0.08); color: #2563EB; }
+.action-btn:hover { background: rgba(91, 79, 232,0.08); color: #5B4FE8; }
 .action-btn.danger:hover { background: rgba(239,68,68,0.08); color: #dc2626; }
 
 /* ===== Modal ===== */
@@ -371,7 +371,7 @@ onMounted(load)
   font-size: 14px;
   outline: none;
 }
-.field input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.field input:focus { border-color: #5B4FE8; box-shadow: 0 0 0 3px rgba(91, 79, 232,0.1); }
 .required { color: #EF4444; }
 .hint-text { font-weight: 400; color: var(--text-muted); font-size: 12px; }
 
@@ -391,7 +391,7 @@ onMounted(load)
   transition: background 0.2s;
   padding: 0;
 }
-.toggle-btn.active { background: #2563EB; }
+.toggle-btn.active { background: #5B4FE8; }
 .toggle-knob {
   position: absolute;
   top: 3px;
@@ -438,8 +438,8 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(37,99,235,0.06);
-  border: 1px solid rgba(37,99,235,0.2);
+  background: rgba(91, 79, 232,0.06);
+  border: 1px solid rgba(91, 79, 232,0.2);
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -447,7 +447,7 @@ onMounted(load)
   flex: 1;
   font-size: 15px;
   font-weight: 700;
-  color: #2563EB;
+  color: #5B4FE8;
   letter-spacing: 0.5px;
   word-break: break-all;
 }
@@ -458,7 +458,7 @@ onMounted(load)
   padding: 6px 12px;
   border-radius: 6px;
   border: none;
-  background: #2563EB;
+  background: #5B4FE8;
   color: #fff;
   font-size: 12px;
   font-weight: 600;
