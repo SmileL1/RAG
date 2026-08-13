@@ -149,7 +149,7 @@ def _ollama_root(base: str) -> str:
     b = (base or "").strip().rstrip("/")
     if b.endswith("/v1"):
         b = b[:-3]
-    return b or "http://localhost:11434"
+    return b or "http://127.0.0.1:11434"
 
 
 class OllamaModelsOut(BaseModel):
@@ -168,10 +168,10 @@ async def ollama_models(base: str | None = None):
     """列出本机 Ollama 已安装的模型（调用 Ollama 原生 /api/tags）。"""
     root = _ollama_root(base or settings.LLM_API_BASE)
     if not _is_local_llm(root):
-        root = "http://localhost:11434"
+        root = "http://127.0.0.1:11434"
     url = root.rstrip("/") + "/api/tags"
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
+        async with httpx.AsyncClient(timeout=4.0, trust_env=False) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()

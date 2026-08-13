@@ -33,8 +33,13 @@ class DashScopeEmbedder(BaseEmbedder):
         base_url: str = DASHSCOPE_COMPAT_BASE,
         timeout: float = 60.0,
     ):
+        api_key = (api_key or "").strip()
         if not api_key:
             raise ValueError("DASHSCOPE_API_KEY 未配置")
+        try:
+            api_key.encode("ascii")
+        except UnicodeEncodeError as e:
+            raise ValueError("DASHSCOPE_API_KEY 包含非 ASCII 字符，请替换为阿里云 DashScope 控制台里的真实 API Key") from e
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
         self._model = model
         self.dimension = dimension

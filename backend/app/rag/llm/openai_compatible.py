@@ -8,12 +8,18 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
+import httpx
 from loguru import logger
 from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.exceptions import LLMError
 from app.rag.llm.base import BaseLLM
+
+
+def _is_local_base(api_base: str) -> bool:
+    base = (api_base or "").lower()
+    return "127.0.0.1" in base or "localhost" in base or "11434" in base or "ollama" in base
 
 
 class OpenAICompatibleLLM(BaseLLM):
@@ -28,7 +34,14 @@ class OpenAICompatibleLLM(BaseLLM):
     ):
         if not api_key:
             raise ValueError("LLM API Key 未配置")
-        self._client = AsyncOpenAI(api_key=api_key, base_url=api_base, timeout=timeout)
+        if _is_local_base(api_base):
+            self._client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=api_base,
+                http_client=httpx.AsyncClient(timeout=timeout, trust_env=False),
+            )
+        else:
+            self._client = AsyncOpenAI(api_key=api_key, base_url=api_base, timeout=timeout)
         self._model = model
         self._default_temperature = default_temperature
         self._default_max_tokens = default_max_tokens

@@ -46,7 +46,7 @@ const LLM_PRESETS: Record<string, { label: string; base: string; model: string }
   qwen: { label: '通义千问 (DashScope)', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
   kimi: { label: 'Kimi (Moonshot)', base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
   openai: { label: 'OpenAI', base: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-  ollama: { label: 'Ollama 本地', base: 'http://localhost:11434/v1', model: '' },
+  ollama: { label: 'Ollama 本地', base: 'http://127.0.0.1:11434/v1', model: '' },
   custom: { label: '自定义', base: '', model: '' },
 }
 
