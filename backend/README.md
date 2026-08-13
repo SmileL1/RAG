@@ -51,10 +51,18 @@ uv run alembic upgrade head
 
 ### 5. 启动 API
 ```powershell
-uv run uvicorn app.main:app --reload --port 8000
+$env:NO_PROXY="127.0.0.1,localhost,::1"
+$env:no_proxy="127.0.0.1,localhost,::1"
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-访问 http://localhost:8000/docs 查看 Swagger UI。
+访问 http://127.0.0.1:8000/docs 查看 Swagger UI。
+
+开发时如需热重载，可追加：
+
+```powershell
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --reload-dir app --host 127.0.0.1 --port 8000
+```
 
 ### 6. 启动 Celery Worker（新终端，Windows 必须用 -P solo）
 ```powershell

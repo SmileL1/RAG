@@ -78,12 +78,15 @@ cd backend
 **终端 1 — 后端 API：**
 ```powershell
 cd backend
-.venv\Scripts\uvicorn app.main:app --reload --reload-dir app
-# http://localhost:8000/docs — Swagger UI
+$env:NO_PROXY="127.0.0.1,localhost,::1"
+$env:no_proxy="127.0.0.1,localhost,::1"
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+# http://127.0.0.1:8000/docs — Swagger UI
 ```
 
 > 首次启动会自动加载 bge-reranker-v2-m3（约 2GB），初始化完成约需 1~3 分钟。
 > 启动日志显示 `✅ 已创建默认管理员账号: admin / admin123` 即表示初始化成功。
+> 开发时如需热重载，可在环境确认正常后追加 `--reload --reload-dir app`。
 
 **终端 2 — 前端：**
 ```powershell
@@ -118,9 +121,17 @@ npm run dev
    ```bash
    ollama pull qwen2.5:3b      # 或 qwen2.5:1.5b（更快）/ gemma3 等
    ```
-2. 设置页 → 供应商选 **Ollama 本地**（地址自动填 `http://localhost:11434/v1`）→ 点「刷新」→ 模型下拉里选刚拉的模型 → Key 留空 → 保存 → 测试连接。
+2. 设置页 → 供应商选 **Ollama 本地**（地址自动填 `http://127.0.0.1:11434/v1`）→ 点「刷新」→ 模型下拉里选刚拉的模型 → Key 留空 → 保存 → 测试连接。
 
 > 说明：Gemini 等是闭源云端模型（需联网/代理）；想本地离线请用 Ollama + 开源模型（Qwen / Gemma 等）。纯 CPU 推理建议选 1.5B~3B 量化模型。
+> 如果后端报 502 但 `http://127.0.0.1:11434/api/tags` 直连正常，通常是代理环境影响了 Python HTTP 客户端，请确认后端启动前设置了上面的 `NO_PROXY/no_proxy`。
+
+### Embedding 选择
+
+RAG 建库和检索还需要 Embedding，LLM 选 Ollama 并不等于 Embedding 也本地化。
+
+- 使用 DashScope：`.env` 中保持 `EMBEDDING_PROVIDER=dashscope`，并填写真实 `DASHSCOPE_API_KEY`。如果报 `Free quota exhausted`，说明免费额度用完，需要充值、关闭“仅使用免费额度”，或更换有效 Key。
+- 使用本地 bge-m3：`.env` 中改为 `EMBEDDING_PROVIDER=local_bge`，并保留 `LOCAL_BGE_MODEL_PATH=BAAI/bge-m3`。首次加载会下载/加载模型，速度较慢且更吃内存。
 
 ## Docker 部署（生产）
 
@@ -222,7 +233,7 @@ DASHSCOPE_API_KEY=sk-xxx
 # ===== LLM =====
 # 这组（供应商/地址/模型/Key）与下方检索参数也可在「设置页」运行时修改并写回本文件
 LLM_PROVIDER=deepseek                              # deepseek | openai | qwen | kimi | ollama | 自定义
-LLM_API_BASE=https://api.deepseek.com/v1          # Ollama 本地：http://localhost:11434/v1
+LLM_API_BASE=https://api.deepseek.com/v1          # Ollama 本地：http://127.0.0.1:11434/v1
 LLM_API_KEY=sk-xxx                                # Ollama 本地可填任意占位（如 ollama）
 LLM_MODEL=deepseek-chat                           # Ollama 例：qwen2.5:3b
 
